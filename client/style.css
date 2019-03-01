@@ -1,0 +1,129 @@
+
+body, html{
+    font-family: sans-serif;
+    padding: 0;
+    margin: 0;
+    margin-top:30px;
+}
+
+
+
+.game-btn{
+
+    height:40px;
+    width:100px;
+    background: #ddd;
+    border: 1px solid;
+}
+
+.game-btn:hover{
+    background: #eee;
+}
+
+#container{
+    text-align: center;
+}
+
+#bird-container{
+    margin: auto;
+    width:70%;
+    min-width: 500px;
+
+}
+
+.bird{
+    display: inline;
+    width: 100px;
+}
+
+.bird-img{
+    width: 49%;
+    display: inline;
+    cursor: pointer;
+    margin: 2px;
+    padding:0;
+}
+
+.guess{
+    display: block;
+    height:40px;
+    width: 100%;
+    text-align: center;
+}
+
+.correct{
+    padding: 5px;
+    background-color: green;
+    color:white
+}
+
+.incorrect{
+    padding: 5px;
+    background-color: red;
+    color:white
+}
+
+.hide{
+    visibility: hidden;
+}
+
+.bird-sound{
+    /* width:200px; */
+}
+
+#high-score{
+    display: none;
+    margin: auto;
+    width: 80%;
+    padding-bottom:40px;
+}
+
+#high-score-list{
+    margin: auto;
+    width: 80%;
+    padding-bottom:40px;
+    padding-top: 50px;
+}
+
+input{
+    width:200px;
+    height:30px;
+}
+
+.table-head{
+    font-weight: bold;
+}
+
+.table{
+    margin-bottom: 100px;
+}
+
+.table-col{
+    padding-right: 50px;
+    padding-left: 50px;
+}
+
+.table-row{
+    /* border: 1px solid; */
+    width:300px;
+    margin: auto;
+    height:30px;
+    padding-top: 5px;
+    background-color: #ddd;
+}
+
+.table-row:nth-child(2n+1){
+    background-color: #eee;
+}
+
+.right-col{
+    float:right;
+}
+.left-col{
+    float:left;
+}
+
+#info-text{
+    width:300px;
+    margin:auto;
+}

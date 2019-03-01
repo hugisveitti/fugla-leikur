@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Fuglaleikur</title>
+    <link rel="stylesheet" href="./client/style.css">
+</head>
+<body>
+    <div id='container'>
+        <div id='info-text'>
+    <p>Velkomin í íslenska fugla leikin, hann er í þróun.</p>
+    <p>Reglurnar eru einfaldar, fjórar myndir eru sýndar, annað hvort stendur nafnið á fuglinum eða spilað er hljóðið sem fuglinn gefur frá sér.
+    Svo á að ýta á rétta mynd til að fá stig. Eitt stig fæst fyrir að ýta á rétta mynd, stig er tekið af ef ýtt er á ranga mynd.</p>
+</div>
+        <div id='bird-container'>
+        </div>
+
+        <div id='high-score'>
+            <form action="/highscore" method='post' onsubmit="closeHighscore()">
+                <p>Skráðu inn nafnið þitt og ýtu á senda til að komast á stigalistann</p>
+                <input type="text" id='form-game-mode' name='gameMode' hidden>
+                <input type="text" id='game-score' name='score' hidden>
+                <input type="text" name='name' placeholder="Nafn">
+                <input type="submit" class='game-btn' value='senda'>
+            </form>
+        </div>
+
+        <button class='game-btn' onclick="startGame()">Byrja leik með texta</button>
+        <button class='game-btn' onclick='startSoundGame()'>Spila leik með hljóði</button>
+
+        <p id='last-bird'></p>
+        <p id='correctness'></p>
+        <p>Stig <span id='score'>0</span></p>
+        <p>Fuglar eftir <span id='birds-left'></span></p>
+        <p>Allt tekið í leyfisleysi af https://fuglavefur.is. </p>
+        <p>Ég hef gaman að fuglum og vildi búa til leik, ég græði ekkert á þessu.</p>
+
+        <div id='high-score-list'>
+            <h1>Hæstu stigin</h1>
+        </div>
+    </div>
+
+</body>
+<script>
+
+var lastBirdDiv = document.getElementById('last-bird');
+var lastBird = '';
+var gameBtns = document.getElementsByClassName('game-btn');
+var birdContainer = document.getElementById('bird-container');
+var correctness = document.getElementById('correctness');
+var guessNumber = -1;
+var dispScore = document.getElementById('score');
+var score = 0;
+allirFuglar = [];
+fjoldiFugla = -1;
+var allirFuglarEftir = []
+var birdLeft = document.getElementById('birds-left');
+var gameMode = '';
+
+//high score div er bara med forminu til ad setja i highscore
+var highScoreDiv = document.getElementById('high-score');
+var formGameMode = document.getElementById('form-game-mode');
+
+var allHighScores = [];
+//
+var highScoreList = document.getElementById('high-score-list');
+
+loadHighscores();
+
+fetch('/allirfuglar')
+.then((resp) => resp.json())//utf 8 checka
+.then((data) => {
+    allirFuglar = data;
+    fjoldiFugla = allirFuglar.length;
+    allirFuglarEftir = JSON.parse(JSON.stringify(allirFuglar));
+    birdLeft.innerHTML = allirFuglarEftir.length;
+})
+.catch((err) => {
+    console.log(err);
+});
+
+// mode er annaðhvor sound eða text
+function newBird(mode){
+        if(mode === 'sound' && lastBird !== ''){
+            //leyfa vita hver var seinasti fugl
+
+            lastBirdDiv.innerHTML = lastBird + ' var í seinustu umferð';
+        }
+
+        while (birdContainer.firstChild) {
+            birdContainer.removeChild(birdContainer.firstChild);
+        }
+        var fuglarISpilun = []
+
+        //mogulegirFuglar inniheldur alla fugla eftir, svo eydi eg fuglum sem eru i valinu i þessu roundi
+        var mogulegirFuglar = JSON.parse(JSON.stringify(allirFuglarEftir));
+
+        //muna hvada fugl af 4 er i spilun og eyda honum ur fylkinu...
+        var i=0;
+        while(fuglarISpilun.length < 4 && allirFuglarEftir.length - fuglarISpilun.length > 0){
+            var rand = Math.floor((Math.random() * (mogulegirFuglar.length-1)));
+
+            fuglarISpilun.push(mogulegirFuglar[rand])
+            mogulegirFuglar = mogulegirFuglar.filter(item => {
+                    if(item['name'] !== mogulegirFuglar[rand]['name']){
+                        return item
+                    }
+                })
+
+            i++;
+        }
+
+
+
+        for(var i=0; i<fuglarISpilun.length; i++){
+            var birdImg = document.createElement('img');
+            birdImg.src = fuglarISpilun[i]['imgUrl'];
+            birdImg.classList.add('bird-img')
+            birdImg.classList.add('bird')
+            birdImg.id = i;
+            birdImg.addEventListener('click', imgClicked);
+            birdContainer.appendChild(birdImg);
+        }
+
+        var guess = document.createElement('div');
+        guess.classList.add('guess')
+        var rand2 = Math.floor((Math.random() * fuglarISpilun.length));
+        guessNumber = rand2;
+        //eyda fugli sem verid er ad spila..
+        allirFuglarEftir = allirFuglarEftir.filter(item => {
+                if(item['name'] !== fuglarISpilun[guessNumber]['name']){
+                    return item
+                }
+            })
+        lastBird = fuglarISpilun[guessNumber]['name'];
+    if(mode === 'text'){
+        guess.innerHTML = 'Hvaða fugl er ' + fuglarISpilun[guessNumber]['name'];
+
+    } else {
+        var aud = document.createElement('audio');
+        aud.setAttribute('controls', true)
+        aud.src = fuglarISpilun[guessNumber]['soundUrl'];
+        aud.classList.add('bird-sound')
+        aud.setAttribute('src', fuglarISpilun[guessNumber]["soundUrl"])
+        guess.appendChild(aud)
+    }
+        birdContainer.appendChild(guess);
+
+        //html sem displayar hvad eru margir fuglar eftir..
+        birdLeft.innerHTML = allirFuglarEftir.length;
+    }
+
+
+
+
+    function imgClicked(e){
+        var spanCorrect = document.createElement('span');
+        if(parseInt(e.target.id) === guessNumber){
+            spanCorrect.innerHTML = 'Rétt!'
+            spanCorrect.classList.add('correct');
+            score++;
+        } else{
+            spanCorrect.innerHTML = 'Rangt'
+            spanCorrect.classList.add('incorrect');
+            score--;
+        }
+        dispScore.innerHTML = score;
+        while (correctness.firstChild) {
+            correctness.removeChild(correctness.firstChild);
+        }
+        correctness.appendChild(spanCorrect);
+        if(allirFuglarEftir.length !== 0){
+            newBird(gameMode);
+        } else {
+            gameOver();
+        }
+    }
+
+
+    function gameOver(){
+        for(var i=0; i<gameBtns.length; i++){
+            gameBtns[i].classList.remove('hide');
+        }
+        while (birdContainer.firstChild) {
+            birdContainer.removeChild(birdContainer.firstChild);
+        }
+        var gameScore = document.getElementById('game-score');
+
+        formGameMode.setAttribute('value', gameMode);
+        gameScore.setAttribute('value' , score);
+        highScoreDiv.style.display = 'block';
+    }
+
+
+    function loadHighscores(){
+        fetch('/highscores')
+        .then((resp) => resp.json())//utf 8 checka
+        .then((data) => {
+            allHighScores = data;
+            var soundHighScores = [];
+            var textHighScores = [];
+            for(var i=0; i<allHighScores.length; i++){
+                allHighScores[i]['score'] = parseInt(allHighScores[i]['score']);
+                if(allHighScores[i]['gameMode'] === 'sound'){
+                    soundHighScores.push(allHighScores[i]);
+                } else if(allHighScores[i]['gameMode'] === 'text'){
+
+                    textHighScores.push(allHighScores[i])
+                }
+            }
+            displayHighScores(soundHighScores, 'Hljóðleikur');
+            displayHighScores(textHighScores, 'Textaleikur');
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+    }
+
+
+
+    function startGame(){
+        highScoreDiv.style.display = 'none';
+        fjoldiFugla = allirFuglar.length;
+        allirFuglarEftir = JSON.parse(JSON.stringify(allirFuglar));
+        birdLeft.innerHTML = allirFuglarEftir.length;
+        for(var i=0; i<gameBtns.length; i++){
+            gameBtns[i].classList.add('hide');
+        }
+        gameMode = 'text';
+        newBird('text');
+        formGameMode.setAttribute('value', gameMode)
+    }
+
+
+    function startSoundGame(){
+        highScoreDiv.style.display = 'none';
+        fjoldiFugla = allirFuglar.length;
+        allirFuglarEftir = JSON.parse(JSON.stringify(allirFuglar));
+        birdLeft.innerHTML = allirFuglarEftir.length;
+        for(var i=0; i<gameBtns.length; i++){
+            gameBtns[i].classList.add('hide');
+        }
+        gameMode = 'sound';
+        newBird('sound');
+        formGameMode.setAttribute('value', gameMode)
+    }
+
+
+    function closeHighscore(){
+        highScoreDiv.style.display = 'hidden'
+    }
+
+
+//aetladi ad nota tables en thad var ehv fokkad
+    function displayHighScores(arr, mode){
+        arr.sortOn('score');
+        var highDiv = document.createElement('div');
+        var h3 = document.createElement('h3');
+        h3.innerHTML = mode;
+        highDiv.appendChild(h3);
+        var table = document.createElement('div');
+        table.classList.add('table');
+        var tr = document.createElement('div');
+        tr.classList.add('table-row')
+        tr.classList.add('table-head')
+        var th = document.createElement('span');
+        th.classList.add('table-col')
+        th.classList.add('table-head');
+        th.classList.add('left-col');
+        th.innerHTML = 'Nafn';
+        var th2 = document.createElement('span');
+        th2.innerHTML = 'Stig';
+        th2.classList.add('table-col')
+        th2.classList.add('table-head');
+        th2.classList.add('right-col');
+
+        tr.appendChild(th);
+        tr.appendChild(th2);
+        table.appendChild(tr);
+        for(var i=0;i<arr.length; i++){
+            var tr2 = document.createElement('div');
+            tr2.classList.add('table-row')
+
+            var td = document.createElement('span');
+            td.innerHTML = arr[i]['name'];
+            td.classList.add('table-col')
+            td.classList.add('left-col');
+            tr2.appendChild(td);
+
+            var td2 = document.createElement('span');
+            td2.innerHTML = arr[i]['score'];
+            td2.classList.add('table-col')
+            td2.classList.add('right-col');
+            tr2.appendChild(td2);
+            table.appendChild(tr2)
+        }
+        highDiv.appendChild(table)
+        highScoreList.appendChild(highDiv);
+    }
+
+    Array.prototype.sortOn = function(key){
+    this.sort(function(a, b){
+        if(a[key] > b[key]){
+            return -1;
+        }else if(a[key] < b[key]){
+            return 1;
+        }
+        return 0;
+        });
+    }
+
+</script>
+</html>
